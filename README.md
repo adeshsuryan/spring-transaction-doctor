@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/banner.svg" alt="spring-transaction-doctor" width="800"/>
+</p>
+
 # Spring Transaction Doctor
 
 Find silent transaction bugs in Spring applications — before they corrupt
@@ -117,6 +121,9 @@ exposing.
 mvn clean verify
 ```
 
-24 tests cover every rule end-to-end with real Spring proxies. See
+24 tests cover every rule end-to-end with real Spring proxies. A runnable
+fixture app lives at `test-java-project/tx-doctor-fixture/` in the sibling
+test workspace, and `matrix-tx-doctor/` there runs the JDK×Boot Docker
+matrix. See
 [CONTRIBUTING.md](CONTRIBUTING.md) for the read-only/fail-open rules of
 the codebase, and [SECURITY.md](SECURITY.md) for the threat model.
