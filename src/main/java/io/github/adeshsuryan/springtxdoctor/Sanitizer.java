@@ -1,5 +1,7 @@
 package io.github.adeshsuryan.springtxdoctor;
 
+import org.springframework.lang.Nullable;
+
 /**
  * Sanitizes externally-originated strings (transaction names set
  * programmatically, bean names, class names) before they reach logs or
@@ -13,7 +15,8 @@ public final class Sanitizer {
     private Sanitizer() {
     }
 
-    public static String clean(String value) {
+    @Nullable
+    public static String clean(@Nullable String value) {
         if (value == null) {
             return null;
         }

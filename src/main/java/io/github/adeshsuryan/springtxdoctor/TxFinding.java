@@ -6,6 +6,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.lang.Nullable;
+
 /**
  * An evidence-backed diagnostic finding. Immutable once created via the
  * fluent constructor-style usage in this class; occurrence counts are
@@ -42,8 +44,8 @@ public final class TxFinding {
     public String ruleCode() { return ruleCode; }
     public Severity severity() { return severity; }
     public Confidence confidence() { return confidence; }
-    public String transactionName() { return transactionName; }
-    public String managerBean() { return managerBean; }
+    @Nullable public String transactionName() { return transactionName; }
+    @Nullable public String managerBean() { return managerBean; }
     public String message() { return message; }
     public Map<String, String> evidence() { return evidence; }
     public List<String> nextChecks() { return nextChecks; }

@@ -13,6 +13,7 @@ import io.github.adeshsuryan.springtxdoctor.TxFinding;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 import org.springframework.aop.support.AopUtils;
+import org.springframework.lang.Nullable;
 import org.springframework.transaction.IllegalTransactionStateException;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.UnexpectedRollbackException;
@@ -54,6 +55,7 @@ public final class DoctorBoundaryInterceptor implements MethodInterceptor {
     /** Minimal indirection so the interceptor stays unit-testable. */
     @FunctionalInterface
     public interface TransactionManagerResolver {
+        @Nullable
         PlatformTransactionManager resolve(TransactionAttribute attr);
     }
 
@@ -118,7 +120,7 @@ public final class DoctorBoundaryInterceptor implements MethodInterceptor {
      * reported so the catch path does not double-flag the exception.
      */
     private boolean observePreInvocation(TransactionAttribute attr,
-            String txName, boolean priorActive, String priorName) {
+            String txName, boolean priorActive, @Nullable String priorName) {
         boolean flagged = false;
         try {
             int propagation = attr.getPropagationBehavior();
@@ -203,7 +205,7 @@ public final class DoctorBoundaryInterceptor implements MethodInterceptor {
     }
 
     private void afterThrow(TransactionAttribute attr, String txName,
-            Throwable t, String priorName,
+            Throwable t, @Nullable String priorName,
             long durationMs, boolean preFlagged) {
         try {
             String name = clean(txName);
@@ -242,7 +244,7 @@ public final class DoctorBoundaryInterceptor implements MethodInterceptor {
     }
 
     private void emitRollbackOnly(String name, Throwable t,
-            String priorName, Confidence c) {
+            @Nullable String priorName, Confidence c) {
         sink.emit(TxFinding
                 .rule("TX_ROLLBACK_ONLY_AT_COMMIT", Severity.CRITICAL, c)
                 .transaction(name)
@@ -315,7 +317,8 @@ public final class DoctorBoundaryInterceptor implements MethodInterceptor {
                 : AopUtils.getTargetClass(invocation.getThis());
     }
 
-    private static String clean(String s) {
+    @Nullable
+    private static String clean(@Nullable String s) {
         return Sanitizer.clean(s);
     }
 

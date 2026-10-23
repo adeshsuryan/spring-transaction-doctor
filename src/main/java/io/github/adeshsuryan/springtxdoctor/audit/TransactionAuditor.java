@@ -9,7 +9,6 @@ import java.util.Set;
 
 import io.github.adeshsuryan.springtxdoctor.Confidence;
 import io.github.adeshsuryan.springtxdoctor.Severity;
-import io.github.adeshsuryan.springtxdoctor.TxDoctorProperties;
 import io.github.adeshsuryan.springtxdoctor.TxFinding;
 
 import org.springframework.aop.support.AopUtils;
@@ -21,6 +20,7 @@ import org.springframework.beans.factory.support.DefaultSingletonBeanRegistry;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.annotation.MergedAnnotations;
 import org.springframework.core.env.Environment;
+import org.springframework.lang.Nullable;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.AnnotationTransactionAttributeSource;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
@@ -82,9 +82,9 @@ public final class TransactionAuditor {
             boolean instantiated = bean != null;
             boolean aopProxy = instantiated && AopUtils.isAopProxy(bean);
             boolean cglib = instantiated && AopUtils.isCglibProxy(bean);
-            Class<?> targetClass = instantiated
-                    ? AopProxyUtils.ultimateTargetClass(bean)
-                    : type;
+            Class<?> targetClass = bean == null
+                    ? type
+                    : AopProxyUtils.ultimateTargetClass(bean);
             if (targetClass == null) {
                 continue;
             }
@@ -363,6 +363,7 @@ public final class TransactionAuditor {
         return new AnnotationTransactionAttributeSource();
     }
 
+    @Nullable
     private static TransactionAttribute safeAttribute(TransactionAttributeSource tas,
             Method method, Class<?> targetClass) {
         try {
@@ -420,6 +421,7 @@ public final class TransactionAuditor {
         return instantiated ? cglib : proxyTargetClass;
     }
 
+    @Nullable
     private static Object existingSingleton(ListableBeanFactory bf, String name) {
         if (bf instanceof DefaultSingletonBeanRegistry r && r.containsSingleton(name)) {
             try {
@@ -431,6 +433,7 @@ public final class TransactionAuditor {
         return null;
     }
 
+    @Nullable
     private static Class<?> safeType(ListableBeanFactory bf, String name) {
         try {
             return bf.getType(name, false);
@@ -449,6 +452,7 @@ public final class TransactionAuditor {
         return false;
     }
 
+    @Nullable
     private static String firstName(String[] names) {
         return names.length == 0 ? null : names[0];
     }

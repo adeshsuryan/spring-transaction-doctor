@@ -1,7 +1,6 @@
 package io.github.adeshsuryan.springtxdoctor;
 
 import org.springframework.lang.NonNull;
-import org.springframework.lang.Nullable;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.AbstractPlatformTransactionManager;
 import org.springframework.transaction.support.DefaultTransactionStatus;
@@ -42,17 +41,17 @@ public class StubTxManager extends AbstractPlatformTransactionManager {
         current.set(transaction);
     }
 
-    @Nullable
+    @NonNull
     @Override
     protected Object doSuspend(@NonNull Object transaction) {
         Object suspended = current.get();
         current.remove();
-        return suspended;
+        return suspended != null ? suspended : transaction;
     }
 
     @Override
     protected void doResume(@NonNull Object transaction,
-            @Nullable Object suspendedResources) {
+            @NonNull Object suspendedResources) {
         if (suspendedResources != null) {
             current.set(suspendedResources);
         }
