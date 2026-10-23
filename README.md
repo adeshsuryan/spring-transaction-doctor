@@ -33,6 +33,8 @@ overclaimed root causes.
 ## Requirements
 
 Java 17+, Spring Boot 3.2–3.5 (Spring Framework 6.1–6.2).
+Docker-verified: JDK 17/21/25 × Boot 3.2.12 / 3.3.13 / 3.4.10 / 3.5.16 —
+12/12 matrix cells pass.
 
 Not supported in 0.1.x: Spring Boot 4.x / Framework 7 (tracked),
 reactive/`ReactiveTransactionManager`, AspectJ LTW mode (audit detects it
