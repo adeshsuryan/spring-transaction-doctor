@@ -18,6 +18,7 @@ public final class JsonReportWriter {
     private JsonReportWriter() {
     }
 
+    @SuppressWarnings("null") // JDK/Spring APIs are unannotated; JDT legacy-conversion noise only
     public static String write(String version, List<TxFinding> findings,
                                Map<String, Long> occurrences, List<String> events) {
         List<TxFinding> sorted = findings.stream()

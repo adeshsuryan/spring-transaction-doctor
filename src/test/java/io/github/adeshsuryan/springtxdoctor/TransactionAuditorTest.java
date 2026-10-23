@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@SuppressWarnings("null") // JDK-boundary conversions in test code
 class TransactionAuditorTest {
 
     // ------------------------------------------------------------ fixtures

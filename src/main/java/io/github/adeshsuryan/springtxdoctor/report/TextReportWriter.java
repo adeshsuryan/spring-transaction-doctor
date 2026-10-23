@@ -16,6 +16,7 @@ public final class TextReportWriter {
     private TextReportWriter() {
     }
 
+    @SuppressWarnings("null") // JDK/Spring APIs are unannotated; JDT legacy-conversion noise only
     public static String write(List<TxFinding> findings,
                                Map<String, Long> occurrences, List<String> events) {
         StringBuilder sb = new StringBuilder(2048);

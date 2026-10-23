@@ -32,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * interceptor sits outside the real TransactionInterceptor, and the stub
  * manager executes the real transaction lifecycle.
  */
+@SuppressWarnings("null") // JDK-boundary conversions in test code
 class DoctorBoundaryInterceptorTest {
 
     private TxDoctorProperties props;

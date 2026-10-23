@@ -55,6 +55,7 @@ public final class TransactionAuditor {
         this.environment = environment;
     }
 
+    @SuppressWarnings("null") // JDK/Spring APIs are unannotated; JDT legacy-conversion noise only
     public List<TxFinding> audit(ListableBeanFactory beanFactory) {
         List<TxFinding> findings = new ArrayList<>();
         boolean aspectj = isAspectjMode(beanFactory);
@@ -326,7 +327,7 @@ public final class TransactionAuditor {
         return covered;
     }
 
-    private static boolean matches(String ruleName, Class<?> ex) {
+    private static boolean matches(@Nullable String ruleName, Class<?> ex) {
         if (ruleName == null) {
             return false;
         }
@@ -342,6 +343,7 @@ public final class TransactionAuditor {
         }
     }
 
+    @SuppressWarnings("null") // getQualifier() is unannotated and may be null
     private static boolean unqualified(TransactionAttribute attr) {
         String q = attr.getQualifier();
         return q == null || q.isEmpty();
