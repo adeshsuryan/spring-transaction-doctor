@@ -74,8 +74,8 @@ public final class TxFinding {
             this.confidence = confidence;
         }
 
-        public Builder transaction(String name) { this.transactionName = name; return this; }
-        public Builder manager(String bean) { this.managerBean = bean; return this; }
+        public Builder transaction(@Nullable String name) { this.transactionName = name; return this; }
+        public Builder manager(@Nullable String bean) { this.managerBean = bean; return this; }
         public Builder message(String message) { this.message = message; return this; }
         public Builder evidence(String key, Object value) {
             this.evidence.put(key, String.valueOf(value));

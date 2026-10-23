@@ -73,8 +73,7 @@ class TransactionAuditorTest {
         }
     }
 
-    static AnnotationConfigApplicationContext context(
-            @org.springframework.lang.NonNull Class<?>... classes) {
+    static AnnotationConfigApplicationContext context(Class<?>... classes) {
         var ctx = new AnnotationConfigApplicationContext();
         ctx.setEnvironment(new StandardEnvironment());
         ctx.register(classes);

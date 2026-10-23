@@ -18,7 +18,7 @@ class SanitizerTest {
     void capsLength() {
         String long_ = "x".repeat(500);
         String out = Sanitizer.clean(long_);
-        assertTrue(out.length() <= 201);
+        assertTrue(out != null && out.length() <= 201);
     }
 
     @Test
