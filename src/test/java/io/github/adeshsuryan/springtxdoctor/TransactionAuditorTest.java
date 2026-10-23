@@ -81,12 +81,6 @@ class TransactionAuditorTest {
         return ctx;
     }
 
-    private List<TxFinding> audit(Class<?>... classes) {
-        try (var ctx = context(classes)) {
-            return new TransactionAuditor(ctx.getEnvironment()).audit(ctx.getBeanFactory());
-        }
-    }
-
     private static List<String> codes(List<TxFinding> findings) {
         return findings.stream().map(TxFinding::ruleCode).collect(Collectors.toList());
     }

@@ -1,5 +1,7 @@
 package io.github.adeshsuryan.springtxdoctor;
 
+import org.springframework.lang.NonNull;
+import org.springframework.lang.Nullable;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.AbstractPlatformTransactionManager;
 import org.springframework.transaction.support.DefaultTransactionStatus;
@@ -21,6 +23,7 @@ public class StubTxManager extends AbstractPlatformTransactionManager {
         setNestedTransactionAllowed(false);
     }
 
+    @NonNull
     @Override
     protected Object doGetTransaction() {
         Object tx = current.get();
@@ -28,42 +31,45 @@ public class StubTxManager extends AbstractPlatformTransactionManager {
     }
 
     @Override
-    protected boolean isExistingTransaction(Object transaction) {
+    protected boolean isExistingTransaction(@NonNull Object transaction) {
         return current.get() != null;
     }
 
     @Override
-    protected void doBegin(Object transaction, TransactionDefinition definition) {
+    protected void doBegin(@NonNull Object transaction,
+            @NonNull TransactionDefinition definition) {
         begins++;
         current.set(transaction);
     }
 
+    @Nullable
     @Override
-    protected Object doSuspend(Object transaction) {
+    protected Object doSuspend(@NonNull Object transaction) {
         Object suspended = current.get();
         current.remove();
         return suspended;
     }
 
     @Override
-    protected void doResume(Object transaction, Object suspendedResources) {
+    protected void doResume(@NonNull Object transaction,
+            @Nullable Object suspendedResources) {
         if (suspendedResources != null) {
             current.set(suspendedResources);
         }
     }
 
     @Override
-    protected void doCommit(DefaultTransactionStatus status) {
+    protected void doCommit(@NonNull DefaultTransactionStatus status) {
         commits++;
     }
 
     @Override
-    protected void doRollback(DefaultTransactionStatus status) {
+    protected void doRollback(@NonNull DefaultTransactionStatus status) {
         rollbacks++;
     }
 
     @Override
-    protected void doCleanupAfterCompletion(Object transaction) {
+    protected void doCleanupAfterCompletion(@NonNull Object transaction) {
         current.remove();
     }
 }
