@@ -8,28 +8,33 @@ import java.nio.file.StandardOpenOption;
 import java.util.List;
 
 import io.github.adeshsuryan.springtxdoctor.audit.TransactionAuditor;
-import io.github.adeshsuryan.springtxdoctor.observe.TxInterceptorPostProcessor;
+import io.github.adeshsuryan.springtxdoctor.observe.DoctorBoundaryInterceptor;
 import io.github.adeshsuryan.springtxdoctor.report.JsonReportWriter;
 import io.github.adeshsuryan.springtxdoctor.report.TextReportWriter;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.aop.Advisor;
+import org.springframework.aop.support.DefaultPointcutAdvisor;
 import org.springframework.beans.factory.ListableBeanFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.SmartInitializingSingleton;
-import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.transaction.TransactionAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.core.Ordered;
 import org.springframework.core.env.Environment;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.interceptor.TransactionAttributeSource;
 
 /**
  * Spring Boot autoconfiguration: startup audit (on by default, read-only)
- * and opt-in runtime observation (transaction-manager decoration).
+ * and opt-in runtime observation via a pointcut advisor ordered just
+ * outside the transaction advisor.
  */
 @AutoConfiguration(after = TransactionAutoConfiguration.class)
 @ConditionalOnClass(PlatformTransactionManager.class)
@@ -42,19 +47,25 @@ public class TxDoctorAutoConfiguration {
     private static final String VERSION = "0.1.0";
 
     /**
-     * Decorates TransactionInterceptor beans when observe mode is on.
-     * Declared static so the post-processor registers before regular beans
-     * are eligible for post-processing. Dependencies are ObjectProviders:
-     * a static post-processor instantiates too early for
-     * ConfigurationProperties binding, so resolution must be lazy.
+     * Observe mode: after all singletons are instantiated, weave the
+     * boundary interceptor into every proxy whose advice chain contains
+     * Spring's TransactionInterceptor. See {@link
+     * io.github.adeshsuryan.springtxdoctor.observe.TxBoundaryWeaver} for
+     * why weaving replaces a plain Advisor bean.
      */
     @Bean
+    @ConditionalOnBean(TransactionAttributeSource.class)
     @ConditionalOnProperty(prefix = "spring.transaction-doctor.observe",
             name = "enabled", havingValue = "true")
-    public static BeanPostProcessor txInterceptorObservingPostProcessor(
-            ObjectProvider<TxDoctorProperties> props,
-            ObjectProvider<FindingSink> sink) {
-        return new TxInterceptorPostProcessor(props, sink);
+    public SmartInitializingSingleton txDoctorObservationWeaver(
+            TransactionAttributeSource tas,
+            ObjectProvider<PlatformTransactionManager> ptmProvider,
+            ListableBeanFactory beanFactory,
+            TxDoctorProperties props, FindingSink sink) {
+        return () -> io.github.adeshsuryan.springtxdoctor.observe
+                .TxBoundaryWeaver.weave(beanFactory, tas,
+                        attr -> resolveManager(beanFactory, ptmProvider, attr),
+                        sink, props);
     }
 
     @Bean
@@ -87,6 +98,24 @@ public class TxDoctorAutoConfiguration {
                         t.getClass().getSimpleName());
             }
         };
+    }
+
+    /** Resolve the manager a given attribute would use: qualifier when set,
+     * otherwise the unique manager (null when ambiguous). */
+    private static PlatformTransactionManager resolveManager(
+            ListableBeanFactory beanFactory,
+            ObjectProvider<PlatformTransactionManager> ptmProvider,
+            org.springframework.transaction.interceptor.TransactionAttribute attr) {
+        String qualifier = attr == null ? null : attr.getQualifier();
+        if (qualifier != null && !qualifier.isEmpty()) {
+            try {
+                return beanFactory.getBean(qualifier,
+                        PlatformTransactionManager.class);
+            } catch (Throwable t) {
+                return null;
+            }
+        }
+        return ptmProvider.getIfUnique();
     }
 
     private static void writeReport(TxDoctorProperties props, FindingSink sink) {

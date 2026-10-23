@@ -28,16 +28,17 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * End-to-end: services are proxied with Spring AOP, the wrapped
- * TransactionInterceptor is the advice, and the stub manager executes the
- * real transaction lifecycle. What a real app would experience.
+ * End-to-end: services are proxied with Spring AOP, the boundary
+ * interceptor sits outside the real TransactionInterceptor, and the stub
+ * manager executes the real transaction lifecycle.
  */
 class DoctorTransactionInterceptorTest {
 
     private TxDoctorProperties props;
     private FindingSink sink;
     private StubTxManager manager;
-    private TxInterceptorPostProcessor bpp;
+    private DoctorBoundaryInterceptor boundary;
+    private TransactionInterceptor txInterceptor;
 
     // ------------------------------------------------------- fixture svc
 
@@ -125,7 +126,12 @@ class DoctorTransactionInterceptorTest {
         props.getObserve().setEnabled(true);
         sink = new FindingSink(props);
         manager = new StubTxManager();
-        bpp = new TxInterceptorPostProcessor(provider(props), provider(sink));
+        var tas = new AnnotationTransactionAttributeSource();
+        boundary = new DoctorBoundaryInterceptor(tas, attr -> manager, sink, props);
+        txInterceptor = new TransactionInterceptor();
+        txInterceptor.setTransactionAttributeSource(tas);
+        txInterceptor.setTransactionManager(manager);
+        txInterceptor.afterPropertiesSet();
     }
 
     @AfterEach
@@ -133,29 +139,14 @@ class DoctorTransactionInterceptorTest {
         TransactionSynchronizationManager.clear();
     }
 
-    private <T> ObjectProvider<T> provider(T obj) {
-        return new ObjectProvider<>() {
-            @Override public T getObject() { return obj; }
-        };
-    }
-
-    /** Build the observed advice chain and return it. */
-    private TransactionInterceptor doctorInterceptor() {
-        TransactionInterceptor real = new TransactionInterceptor();
-        real.setTransactionAttributeSource(new AnnotationTransactionAttributeSource());
-        real.setTransactionManager(manager);
-        real.afterPropertiesSet();
-        return (TransactionInterceptor)
-                bpp.postProcessAfterInitialization(real, "transactionInterceptor");
-    }
-
-    /** Proxy a service whose @Transactional methods route through the
-     * doctor-wrapped interceptor — exactly like @EnableTransactionManagement. */
+    /** Proxy a service like @EnableTransactionManagement does: the boundary
+     * advisor wraps the tx interceptor (boundary runs first = outermost). */
     @SuppressWarnings("unchecked")
     private <T> T proxied(T target) {
         ProxyFactory pf = new ProxyFactory(target);
         pf.setProxyTargetClass(true);
-        pf.addAdvice(doctorInterceptor());
+        pf.addAdvice(boundary);
+        pf.addAdvice(txInterceptor);
         return (T) pf.getProxy();
     }
 
@@ -167,18 +158,13 @@ class DoctorTransactionInterceptorTest {
     // ------------------------------------------------------------- tests
 
     @Test
-    void wrapPreservesTypeAndSecondWrapSkipped() {
-        TransactionInterceptor wrapped = doctorInterceptor();
-        assertTrue(wrapped instanceof DoctorTransactionInterceptor);
-        assertTrue(wrapped instanceof TransactionInterceptor);
-        Object twice = bpp.postProcessAfterInitialization(wrapped, "transactionInterceptor");
-        assertTrue(twice == wrapped, "must not double-wrap");
-    }
-
-    @Test
-    void nonInterceptorBeanPassesThrough() {
-        Object bean = new Object();
-        assertTrue(bpp.postProcessAfterInitialization(bean, "x") == bean);
+    void nonTransactionalMethodPassesThrough() {
+        class Plain {
+            void work() { }
+        }
+        Plain p = proxied(new Plain());
+        p.work();
+        assertTrue(sink.findings().isEmpty());
     }
 
     @Test
@@ -249,5 +235,50 @@ class DoctorTransactionInterceptorTest {
         assertEquals(1, manager.begins);
         assertEquals(1, manager.commits);
         assertEquals(0, manager.rollbacks);
+    }
+    /** Contract: in a real context, the boundary advisor must land INSIDE
+     * the service proxy — this is what autoconfiguration does. */
+    @org.springframework.context.annotation.Configuration
+    @org.springframework.transaction.annotation.EnableTransactionManagement
+    static class FullTxCfg {
+        @org.springframework.context.annotation.Bean
+        StubTxManager txManager() {
+            return new StubTxManager();
+        }
+
+        @org.springframework.context.annotation.Bean
+        HealthyService svc() {
+            return new HealthyService();
+        }
+    }
+
+    /** Contract: post-refresh weaving puts the boundary advice INSIDE the
+     * service proxy — this is what the autoconfiguration does. */
+    @Test
+    void weaverInstallsBoundaryOnTxProxies() {
+        var ctx = new org.springframework.context.annotation
+                .AnnotationConfigApplicationContext(FullTxCfg.class);
+        try {
+            Object svc = ctx.getBean("svc");
+            assertTrue(org.springframework.aop.support.AopUtils.isAopProxy(svc));
+            var tas = ctx.getBean(org.springframework.transaction.interceptor
+                    .TransactionAttributeSource.class);
+            int woven = TxBoundaryWeaver.weave(ctx.getBeanFactory(), tas,
+                    attr -> ctx.getBean(StubTxManager.class), sink, props);
+            assertTrue(woven > 0, "svc proxy must be woven");
+            var advised = (org.springframework.aop.framework.Advised) svc;
+            assertTrue(advised.getAdvisors()[0].getAdvice()
+                            instanceof DoctorBoundaryInterceptor,
+                    "boundary advice must be outermost");
+            ((HealthyService) svc).ok();
+            assertTrue(sink.events().stream().anyMatch(
+                    e -> e.contains("HealthyService.ok")));
+            // idempotent — a second weave must not double-add
+            int again = TxBoundaryWeaver.weave(ctx.getBeanFactory(), tas,
+                    attr -> ctx.getBean(StubTxManager.class), sink, props);
+            assertEquals(0, again);
+        } finally {
+            ctx.close();
+        }
     }
 }
