@@ -46,6 +46,12 @@ class TransactionAuditorTest {
         }
     }
 
+    static class NoRollbackService {
+        @Transactional(noRollbackFor = IOException.class)
+        public void pay() throws IOException {
+        }
+    }
+
     static class FinalMethodService {
         @Transactional
         public final void frozen() {
@@ -121,6 +127,18 @@ class TransactionAuditorTest {
     void rollbackForCoversCheckedException() {
         try (var ctx = context(TxConfig.class)) {
             ctx.registerBean("svc", RolledBackCheckedService.class);
+            List<TxFinding> findings =
+                    new TransactionAuditor(ctx.getEnvironment()).audit(ctx.getBeanFactory());
+            assertTrue(codes(findings).stream()
+                    .noneMatch(c -> c.equals("TX_CHECKED_EXCEPTION_ROLLBACK_GAP")));
+        }
+    }
+
+    @Test
+    void noRollbackForSuppressesGapFinding() {
+        // explicit noRollbackFor is a deliberate policy, not a gap
+        try (var ctx = context(TxConfig.class)) {
+            ctx.registerBean("svc", NoRollbackService.class);
             List<TxFinding> findings =
                     new TransactionAuditor(ctx.getEnvironment()).audit(ctx.getBeanFactory());
             assertTrue(codes(findings).stream()

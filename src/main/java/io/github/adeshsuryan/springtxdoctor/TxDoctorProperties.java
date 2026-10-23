@@ -55,14 +55,13 @@ public class TxDoctorProperties {
     }
 
     public static class Observe {
-        /** Decorate PlatformTransactionManager beans to observe lifecycle. */
+        /** Weave a boundary interceptor into transactional proxies to
+         * observe the runtime lifecycle. Off by default. */
         private boolean enabled = false;
         /** Transactions longer than this emit TX_LONG_DURATION (suspected). */
         private long longDurationThresholdMs = 3000;
         /** Maximum recent transaction events retained for reports. */
         private int bufferSize = 512;
-        /** Capture bounded stack samples for unnamed transactions. */
-        private boolean sampleStacks = false;
         /** Rollbacks above this count per minute emit TX_ROLLBACK_STORM. */
         private int rollbackStormThreshold = 10;
 
@@ -72,8 +71,6 @@ public class TxDoctorProperties {
         public void setLongDurationThresholdMs(long v) { this.longDurationThresholdMs = v; }
         public int getBufferSize() { return bufferSize; }
         public void setBufferSize(int bufferSize) { this.bufferSize = bufferSize; }
-        public boolean isSampleStacks() { return sampleStacks; }
-        public void setSampleStacks(boolean sampleStacks) { this.sampleStacks = sampleStacks; }
         public int getRollbackStormThreshold() { return rollbackStormThreshold; }
         public void setRollbackStormThreshold(int v) { this.rollbackStormThreshold = v; }
     }

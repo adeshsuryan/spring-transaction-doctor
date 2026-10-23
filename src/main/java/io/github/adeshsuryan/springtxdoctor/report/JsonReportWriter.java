@@ -21,7 +21,7 @@ public final class JsonReportWriter {
     public static String write(String version, List<TxFinding> findings,
                                Map<String, Long> occurrences, List<String> events) {
         List<TxFinding> sorted = findings.stream()
-                .sorted(Comparator.comparing(TxFinding::severity)
+                .sorted(Comparator.comparing(TxFinding::severity).reversed()
                         .thenComparing(TxFinding::firstSeenAt))
                 .toList();
 

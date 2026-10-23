@@ -32,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * interceptor sits outside the real TransactionInterceptor, and the stub
  * manager executes the real transaction lifecycle.
  */
-class DoctorTransactionInterceptorTest {
+class DoctorBoundaryInterceptorTest {
 
     private TxDoctorProperties props;
     private FindingSink sink;

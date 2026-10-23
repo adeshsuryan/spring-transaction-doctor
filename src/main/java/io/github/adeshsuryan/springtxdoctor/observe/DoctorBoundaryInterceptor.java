@@ -105,7 +105,7 @@ public final class DoctorBoundaryInterceptor implements MethodInterceptor {
             afterReturn(txName, (System.nanoTime() - start) / 1_000_000L);
             return result;
         } catch (Throwable t) {
-            afterThrow(attr, txName, t, priorName, priorActive,
+            afterThrow(attr, txName, t, priorName,
                     (System.nanoTime() - start) / 1_000_000L, preFlagged);
             throw t;
         }
@@ -203,7 +203,7 @@ public final class DoctorBoundaryInterceptor implements MethodInterceptor {
     }
 
     private void afterThrow(TransactionAttribute attr, String txName,
-            Throwable t, String priorName, boolean priorActive,
+            Throwable t, String priorName,
             long durationMs, boolean preFlagged) {
         try {
             String name = clean(txName);
@@ -225,10 +225,10 @@ public final class DoctorBoundaryInterceptor implements MethodInterceptor {
                     // Completion-path ITSE — boundary error such as
                     // commit/rollback on a completed or rollback-only tx,
                     // NOT a propagation rejection.
-                    emitRollbackOnly(name, t, Confidence.SUSPECTED);
+                    emitRollbackOnly(name, t, priorName, Confidence.SUSPECTED);
                 }
             } else if (t instanceof UnexpectedRollbackException) {
-                emitRollbackOnly(name, t, Confidence.MEASURED);
+                emitRollbackOnly(name, t, priorName, Confidence.MEASURED);
             }
             boolean rolledBack = attr.rollbackOn(t);
             sink.recordEvent(FindingSink.summaryLine(
@@ -241,7 +241,8 @@ public final class DoctorBoundaryInterceptor implements MethodInterceptor {
         }
     }
 
-    private void emitRollbackOnly(String name, Throwable t, Confidence c) {
+    private void emitRollbackOnly(String name, Throwable t,
+            String priorName, Confidence c) {
         sink.emit(TxFinding
                 .rule("TX_ROLLBACK_ONLY_AT_COMMIT", Severity.CRITICAL, c)
                 .transaction(name)
@@ -250,7 +251,7 @@ public final class DoctorBoundaryInterceptor implements MethodInterceptor {
                         + " — a rollback-only or already-completed transaction")
                 .evidence("transaction", name == null ? "unknown" : name)
                 .evidence("outerTransaction",
-                        currentTxName())
+                        priorName == null ? "none" : clean(priorName))
                 .evidence("exception", t.getClass().getName())
                 .nextCheck("Find which inner method marked the transaction "
                         + "rollback-only (often a swallowed exception or an "
@@ -303,17 +304,6 @@ public final class DoctorBoundaryInterceptor implements MethodInterceptor {
             PlatformTransactionManager tm =
                     managerResolver == null ? null : managerResolver.resolve(attr);
             return tm == null ? "unknown" : tm.getClass().getName();
-        } catch (Throwable t) {
-            return "unknown";
-        }
-    }
-
-    private static String currentTxName() {
-        try {
-            return TransactionSynchronizationManager.isActualTransactionActive()
-                    ? Sanitizer.clean(TransactionSynchronizationManager
-                            .getCurrentTransactionName())
-                    : "none";
         } catch (Throwable t) {
             return "unknown";
         }

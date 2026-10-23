@@ -46,6 +46,12 @@ public final class FindingSink {
         if (finding == null || !props.isRuleEnabled(finding.ruleCode())) {
             return;
         }
+        // Bound the dedup map: a flood of distinct keys in observe mode
+        // must not grow memory without limit.
+        if (!entries.containsKey(finding.dedupKey())
+                && entries.size() >= capacity * 4) {
+            entries.remove(entries.keySet().iterator().next());
+        }
         Entry e = entries.computeIfAbsent(finding.dedupKey(), k -> {
             Entry en = new Entry();
             en.finding = finding;

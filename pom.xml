@@ -90,6 +90,11 @@
       <artifactId>spring-boot-configuration-processor</artifactId>
       <optional>true</optional>
     </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <optional>true</optional>
+    </dependency>
 
     <!-- Tests — spring deps above are already on the test classpath via
          compile+optional scope. -->
@@ -107,11 +112,6 @@
       <groupId>org.springframework</groupId>
       <artifactId>spring-orm</artifactId>
       <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-      <optional>true</optional>
     </dependency>
   </dependencies>
 

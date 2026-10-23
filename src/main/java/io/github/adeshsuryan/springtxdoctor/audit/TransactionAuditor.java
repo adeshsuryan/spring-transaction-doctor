@@ -314,7 +314,8 @@ public final class TransactionAuditor {
         for (RollbackRuleAttribute rule : rba.getRollbackRules()) {
             if (rule instanceof NoRollbackRuleAttribute) {
                 if (matches(rule.getExceptionName(), ex)) {
-                    return false;
+                    // explicit noRollbackFor — the commit is intended
+                    return true;
                 }
                 continue;
             }

@@ -22,7 +22,7 @@ public final class TextReportWriter {
         sb.append("Spring Transaction Doctor\n\n");
 
         List<TxFinding> sorted = findings.stream()
-                .sorted(Comparator.comparing(TxFinding::severity)
+                .sorted(Comparator.comparing(TxFinding::severity).reversed()
                         .thenComparing(TxFinding::firstSeenAt))
                 .toList();
         sb.append("FINDINGS\n");
